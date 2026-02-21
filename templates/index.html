@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Upcoming Events</h1>
+
+{% if not events %}
+  <p class="empty">No upcoming events found. Run <code>cv scrape</code> to fetch events.</p>
+{% else %}
+  <table class="events-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Event</th>
+        <th>Venue</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td class="date">{{ event.date.strftime("%a, %b %-d") }}</td>
+        <td class="title"><a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a></td>
+        <td class="venue">
+          {% set venue = venues.get(event.venue_key) %}
+          {% if venue %}
+            <a href="{{ base_url }}/venues/{{ event.venue_key }}.html">{{ venue.name }}</a>
+          {% else %}
+            {{ event.venue_key }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}

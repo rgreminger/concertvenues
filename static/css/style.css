@@ -1,0 +1,101 @@
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #222;
+  background: #fafafa;
+}
+
+a { color: #1a6ab1; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Layout ── */
+header, main, footer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+header {
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 2rem;
+}
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  padding-bottom: 1.5rem;
+  border-top: 1px solid #ddd;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+/* ── Header / Nav ── */
+.site-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #222;
+}
+
+/* ── Headings ── */
+h1 { font-size: 1.75rem; margin-bottom: 1rem; }
+
+.venue-meta {
+  color: #555;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Events Table ── */
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.events-table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid #ddd;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+}
+
+.events-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.events-table tr:hover td { background: #f0f4f8; }
+
+td.date {
+  white-space: nowrap;
+  color: #555;
+  font-size: 0.9rem;
+  width: 130px;
+}
+
+td.venue { font-size: 0.9rem; width: 180px; }
+
+.time {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* ── Misc ── */
+.empty { color: #888; font-style: italic; margin-top: 1rem; }
+
+code {
+  background: #eee;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}

@@ -1,0 +1,22 @@
+[site]
+# Base URL where the site will be hosted (GitHub Pages URL)
+base_url = "https://yourusername.github.io/concertvenues"
+# Directory where generated HTML files are written
+output_dir = "output"
+# Number of days ahead to include events
+days_ahead = 90
+# Site title shown in the browser tab and header
+title = "Upcoming Concerts"
+
+[database]
+path = "data/events.db"
+
+# --- Venues ---
+# Add one [venues.<key>] section per venue.
+# The key must match the venue_key in the scraper class.
+# Set enabled = false to skip a venue without removing its config.
+
+# [venues.example_venue]
+# name = "Example Venue"
+# url = "https://www.examplevenue.com/events"
+# enabled = true

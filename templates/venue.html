@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}{{ venue.name if venue else page_title }} — {{ site_title }}{% endblock %}
+
+{% block content %}
+{% if venue %}
+  <h1>{{ venue.name }}</h1>
+  <p class="venue-meta">
+    {% if venue.city %}{{ venue.city }} &mdash; {% endif %}
+    <a href="{{ venue.url }}" target="_blank" rel="noopener">Official website</a>
+  </p>
+{% else %}
+  <h1>{{ page_title }}</h1>
+{% endif %}
+
+<p><a href="{{ base_url }}/index.html">&larr; All venues</a></p>
+
+{% if not events %}
+  <p class="empty">No upcoming events for this venue.</p>
+{% else %}
+  <table class="events-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Event</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td class="date">{{ event.date.strftime("%a, %b %-d") }}</td>
+        <td class="title">
+          <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a>
+          {% if event.time %}<span class="time">{{ event.time.strftime("%-I:%M %p") }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}
