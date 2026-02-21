@@ -65,7 +65,7 @@ def build_site(conn: sqlite3.Connection, cfg: dict, output_dir: Path) -> None:
     site_cfg = cfg_module.get_site(cfg)
     days_ahead = site_cfg.get("days_ahead", 62)
     base_url = site_cfg.get("base_url", "").rstrip("/")
-    site_title = site_cfg.get("title", "Upcoming Concerts")
+    site_title = site_cfg.get("title", "Upcoming Concerts in London")
 
     today = date.today()
 

@@ -6,7 +6,7 @@ output_dir = "output"
 # Number of days ahead to include events
 days_ahead = 90
 # Site title shown in the browser tab and header
-title = "Upcoming Concerts"
+title = "Upcoming Concerts in London"
 
 [database]
 path = "data/events.db"
