@@ -1,9 +1,9 @@
 name: Scrape & Deploy
 
 on:
-  # Run nightly at 06:00 UTC
+  # Run weekly on Monday at 06:00 UTC
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 6 * * 1"
   # Allow manual trigger from the GitHub Actions tab
   workflow_dispatch:
 
