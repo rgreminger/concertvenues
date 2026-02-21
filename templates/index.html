@@ -12,21 +12,27 @@
         <th>Date</th>
         <th>Event</th>
         <th>Venue</th>
+        <th>Price</th>
       </tr>
     </thead>
     <tbody>
       {% for event in events %}
-      <tr>
+      <tr{% if event.sold_out %} class="sold-out"{% endif %}>
         <td class="date">{{ event.date.strftime("%a, %b %-d") }}</td>
-        <td class="title"><a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a></td>
+        <td class="title">
+          <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a>
+          {% if event.sold_out %}<span class="badge sold-out-badge">Sold out</span>{% endif %}
+          {% if event.time %}<span class="time">{{ event.time.strftime("%-I:%M %p") }}</span>{% endif %}
+        </td>
         <td class="venue">
           {% set venue = venues.get(event.venue_key) %}
           {% if venue %}
-            <a href="{{ base_url }}/venues/{{ event.venue_key }}.html">{{ venue.name }}</a>
+            <a href="{{ venue.url }}" target="_blank" rel="noopener">{{ venue.name }}</a>
           {% else %}
             {{ event.venue_key }}
           {% endif %}
         </td>
+        <td class="price">{{ event.price or "—" }}</td>
       </tr>
       {% endfor %}
     </tbody>

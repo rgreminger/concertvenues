@@ -33,6 +33,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             description  TEXT,
             image_url    TEXT,
             on_sale_date TEXT,
+            price        TEXT,
+            sold_out     INTEGER NOT NULL DEFAULT 0,
             UNIQUE(venue_key, url)
         );
     """)
@@ -66,15 +68,17 @@ def get_all_venues(conn: sqlite3.Connection) -> list[Venue]:
 def upsert_event(conn: sqlite3.Connection, event: Event) -> None:
     conn.execute(
         """
-        INSERT INTO events (venue_key, title, date, time, url, description, image_url, on_sale_date)
-        VALUES (:venue_key, :title, :date, :time, :url, :description, :image_url, :on_sale_date)
+        INSERT INTO events (venue_key, title, date, time, url, description, image_url, on_sale_date, price, sold_out)
+        VALUES (:venue_key, :title, :date, :time, :url, :description, :image_url, :on_sale_date, :price, :sold_out)
         ON CONFLICT(venue_key, url) DO UPDATE SET
             title        = excluded.title,
             date         = excluded.date,
             time         = excluded.time,
             description  = excluded.description,
             image_url    = excluded.image_url,
-            on_sale_date = excluded.on_sale_date
+            on_sale_date = excluded.on_sale_date,
+            price        = excluded.price,
+            sold_out     = excluded.sold_out
         """,
         {
             "venue_key":    event.venue_key,
@@ -85,6 +89,8 @@ def upsert_event(conn: sqlite3.Connection, event: Event) -> None:
             "description":  event.description,
             "image_url":    event.image_url,
             "on_sale_date": event.on_sale_date.isoformat() if event.on_sale_date else None,
+            "price":        event.price,
+            "sold_out":     1 if event.sold_out else 0,
         },
     )
     conn.commit()
@@ -99,7 +105,7 @@ def get_upcoming_events(
     end = date.fromordinal(date.fromisoformat(start).toordinal() + days_ahead).isoformat()
     rows = conn.execute(
         """
-        SELECT id, venue_key, title, date, time, url, description, image_url, on_sale_date
+        SELECT id, venue_key, title, date, time, url, description, image_url, on_sale_date, price, sold_out
         FROM events
         WHERE date >= ? AND date <= ?
         ORDER BY date, time
@@ -127,4 +133,6 @@ def _row_to_event(row: sqlite3.Row) -> Event:
         description=row["description"],
         image_url=row["image_url"],
         on_sale_date=date.fromisoformat(row["on_sale_date"]) if row["on_sale_date"] else None,
+        price=row["price"],
+        sold_out=bool(row["sold_out"]),
     )

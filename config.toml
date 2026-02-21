@@ -16,7 +16,76 @@ path = "data/events.db"
 # The key must match the venue_key in the scraper class.
 # Set enabled = false to skip a venue without removing its config.
 
-# [venues.example_venue]
-# name = "Example Venue"
-# url = "https://www.examplevenue.com/events"
-# enabled = true
+[venues.electricballroom]
+name = "Electric Ballroom"
+city = "London, UK"
+url = "https://electricballroom.co.uk/whats-on/"
+enabled = true
+
+[venues.earthackney]
+name = "EartH Hackney"
+city = "London, UK"
+url = "https://earthackney.co.uk/events/"
+enabled = true
+
+[venues.jazzcafe]
+name = "Jazz Cafe"
+city = "London, UK"
+url = "https://thejazzcafe.com/whats-on"
+enabled = true
+
+[venues.roundhouse]
+name = "Roundhouse"
+city = "London, UK"
+url = "https://www.roundhouse.org.uk/whats-on/"
+enabled = true
+
+[venues.islingtonassemblyhall]
+name = "Islington Assembly Hall"
+city = "London, UK"
+url = "https://islingtonassemblyhall.co.uk/events/"
+enabled = true
+
+[venues.alexandrapalace]
+name = "Alexandra Palace"
+city = "London, UK"
+url = "https://www.alexandrapalace.com/whats-on/"
+enabled = true
+
+[venues.o2academybrixton]
+name = "O2 Academy Brixton"
+city = "London, UK"
+url = "https://www.academymusicgroup.com/o2academybrixton/events/"
+enabled = true
+
+[venues.o2forumkentishtown]
+name = "O2 Forum Kentish Town"
+city = "London, UK"
+url = "https://www.academymusicgroup.com/o2forumkentishtown/events/"
+enabled = true
+
+[venues.koko]
+name = "KOKO"
+city = "London, UK"
+url = "https://www.koko.co.uk/whats-on"
+enabled = true
+
+[venues.thegarage]
+name = "The Garage"
+city = "London, UK"
+url = "https://www.thegarage.london/live/"
+enabled = true
+
+# Royal Albert Hall is blocked by Incapsula WAF — use Ticketmaster API (key required)
+# [venues.royalalberthall]
+# name = "Royal Albert Hall"
+# city = "London, UK"
+# url = "https://www.royalalberthall.com/tickets/calendar"
+# enabled = false
+
+# Union Chapel — Isotope JS grid stays empty even with Playwright; no events load
+# [venues.unionchapel]
+# name = "Union Chapel"
+# city = "London, UK"
+# url = "https://unionchapel.org.uk/venue/whats-on/"
+# enabled = false

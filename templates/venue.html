@@ -23,16 +23,19 @@
       <tr>
         <th>Date</th>
         <th>Event</th>
+        <th>Price</th>
       </tr>
     </thead>
     <tbody>
       {% for event in events %}
-      <tr>
+      <tr{% if event.sold_out %} class="sold-out"{% endif %}>
         <td class="date">{{ event.date.strftime("%a, %b %-d") }}</td>
         <td class="title">
           <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a>
+          {% if event.sold_out %}<span class="badge sold-out-badge">Sold out</span>{% endif %}
           {% if event.time %}<span class="time">{{ event.time.strftime("%-I:%M %p") }}</span>{% endif %}
         </td>
+        <td class="price">{{ event.price or "—" }}</td>
       </tr>
       {% endfor %}
     </tbody>

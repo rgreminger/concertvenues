@@ -53,6 +53,39 @@ def _scrape(args, cfg):
         print(f"Cleaned up {removed} past events from the database.")
 
 
+def _serve(args, cfg):
+    import http.server
+    import os
+    import socketserver
+    import webbrowser
+
+    site_cfg = cfg_module.get_site(cfg)
+    output_dir = Path(site_cfg.get("output_dir", "output"))
+    port = args.port
+
+    if not output_dir.exists() or not any(output_dir.iterdir()):
+        print(f"'{output_dir}' is empty or missing. Run 'cv generate' first.")
+        sys.exit(1)
+
+    os.chdir(output_dir)
+
+    class _Handler(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, format, *args):
+            print(f"  {self.command} {self.path}")
+
+    url = f"http://localhost:{port}"
+    print(f"Serving '{output_dir}/' at {url}")
+    print("Press Ctrl+C to stop.\n")
+    webbrowser.open(url)
+
+    with socketserver.TCPServer(("", port), _Handler) as httpd:
+        httpd.allow_reuse_address = True
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nServer stopped.")
+
+
 def _generate(args, cfg):
     site_cfg = cfg_module.get_site(cfg)
     db_path = cfg_module.get_database_path(cfg)
@@ -86,6 +119,13 @@ def main():
     # generate
     subparsers.add_parser("generate", help="Generate the static website from the database")
 
+    # serve
+    sp_serve = subparsers.add_parser("serve", help="Serve the generated site locally in a browser")
+    sp_serve.add_argument(
+        "--port", type=int, default=8000, metavar="PORT",
+        help="Port to listen on (default: 8000)",
+    )
+
     # run (scrape + generate)
     sp_run = subparsers.add_parser("run", help="Scrape all venues then generate the site")
     sp_run.add_argument(
@@ -100,6 +140,8 @@ def main():
         _scrape(args, cfg)
     elif args.command == "generate":
         _generate(args, cfg)
+    elif args.command == "serve":
+        _serve(args, cfg)
     elif args.command == "run":
         _scrape(args, cfg)
         _generate(args, cfg)

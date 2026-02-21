@@ -21,5 +21,7 @@ class Event:
     description: Optional[str] = None
     image_url: Optional[str] = None
     on_sale_date: Optional[date] = None
+    price: Optional[str] = None        # e.g. "£25", "From £30"
+    sold_out: bool = False
     # Populated by DB layer after insert
     id: Optional[int] = field(default=None, repr=False)
