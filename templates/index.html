@@ -8,18 +8,6 @@
 {# ── Filters ── #}
 <aside class="filters" id="filters">
   <div class="filter-group">
-    <span class="filter-label">Venue</span>
-    <div class="filter-options" id="venue-filters">
-      {% for v in venue_list %}
-      <label class="filter-chip">
-        <input type="checkbox" name="venue" value="{{ v.key }}" checked>
-        <span>{{ v.name }}</span>
-      </label>
-      {% endfor %}
-    </div>
-  </div>
-
-  <div class="filter-group">
     <span class="filter-label">Time of day</span>
     <div class="filter-options">
       <label class="filter-chip">
@@ -43,6 +31,18 @@
       <input type="checkbox" name="hideSoldOut" id="hideSoldOut">
       <span>Hide sold out</span>
     </label>
+  </div>
+
+  <div class="filter-group filter-group--venues">
+    <span class="filter-label">Venue</span>
+    <div class="filter-options filter-options--wrap" id="venue-filters">
+      {% for v in venue_list %}
+      <label class="filter-chip">
+        <input type="checkbox" name="venue" value="{{ v.key }}" checked>
+        <span>{{ v.name }}</span>
+      </label>
+      {% endfor %}
+    </div>
   </div>
 </aside>
 

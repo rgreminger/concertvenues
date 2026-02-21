@@ -98,6 +98,11 @@ footer {
   overflow-x: auto;
 }
 
+.filter-group--venues {
+  flex: 1;
+  min-width: 0;
+}
+
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -125,6 +130,10 @@ footer {
   flex-wrap: nowrap;
   gap: 0.3rem;
   align-items: center;
+}
+
+.filter-options--wrap {
+  flex-wrap: wrap;
 }
 
 .filter-chip {
