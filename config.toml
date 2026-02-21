@@ -4,7 +4,7 @@ base_url = "https://yourusername.github.io/concertvenues"
 # Directory where generated HTML files are written
 output_dir = "output"
 # Number of days ahead to include events
-days_ahead = 90
+days_ahead = 180
 # Site title shown in the browser tab and header
 title = "Upcoming Concerts in London"
 
