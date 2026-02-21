@@ -1,41 +1,93 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Upcoming Events</h1>
+<div class="page-header">
+  <h1>Upcoming Events</h1>
+</div>
 
-{% if not events %}
-  <p class="empty">No upcoming events found. Run <code>cv scrape</code> to fetch events.</p>
-{% else %}
-  <table class="events-table">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Event</th>
-        <th>Venue</th>
-        <th>Price</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for event in events %}
-      <tr{% if event.sold_out %} class="sold-out"{% endif %}>
-        <td class="date">{{ event.date.strftime("%a, %b %-d") }}</td>
-        <td class="title">
-          <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a>
-          {% if event.sold_out %}<span class="badge sold-out-badge">Sold out</span>{% endif %}
-          {% if event.time %}<span class="time">{{ event.time.strftime("%-I:%M %p") }}</span>{% endif %}
-        </td>
-        <td class="venue">
-          {% set venue = venues.get(event.venue_key) %}
-          {% if venue %}
-            <a href="{{ venue.url }}" target="_blank" rel="noopener">{{ venue.name }}</a>
-          {% else %}
-            {{ event.venue_key }}
-          {% endif %}
-        </td>
-        <td class="price">{{ event.price or "—" }}</td>
-      </tr>
+{# ── Filters ── #}
+<aside class="filters" id="filters">
+  <div class="filter-group">
+    <span class="filter-label">Venue</span>
+    <div class="filter-options" id="venue-filters">
+      {% for v in venue_list %}
+      <label class="filter-chip">
+        <input type="checkbox" name="venue" value="{{ v.key }}" checked>
+        <span>{{ v.name }}</span>
+      </label>
       {% endfor %}
-    </tbody>
-  </table>
-{% endif %}
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Time of day</span>
+    <div class="filter-options">
+      <label class="filter-chip">
+        <input type="checkbox" name="timeofday" value="evening" checked>
+        <span>Evening</span>
+      </label>
+      <label class="filter-chip">
+        <input type="checkbox" name="timeofday" value="daytime" checked>
+        <span>Daytime</span>
+      </label>
+      <label class="filter-chip">
+        <input type="checkbox" name="timeofday" value="unknown" checked>
+        <span>Time unknown</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Availability</span>
+    <label class="filter-chip">
+      <input type="checkbox" name="hideSoldOut" id="hideSoldOut">
+      <span>Hide sold out</span>
+    </label>
+  </div>
+</aside>
+
+{# ── Calendar ── #}
+<div class="calendar-container" id="calendar">
+  {% for month in months %}
+  <section class="month" data-month="{{ month.year }}-{{ '%02d' % month.month }}">
+    <h2 class="month-title">{{ month.name }}</h2>
+    <div class="cal-grid">
+      <div class="cal-dow">Mon</div>
+      <div class="cal-dow">Tue</div>
+      <div class="cal-dow">Wed</div>
+      <div class="cal-dow">Thu</div>
+      <div class="cal-dow">Fri</div>
+      <div class="cal-dow">Sat</div>
+      <div class="cal-dow">Sun</div>
+
+      {% for week in month.weeks %}
+        {% for day in week %}
+          {% if day == 0 %}
+          <div class="cal-day cal-day--empty"></div>
+          {% else %}
+            {% set day_str = "%s-%02d-%02d" % (month.year, month.month, day) %}
+          <div class="cal-day" data-date="{{ day_str }}"
+               {% if day_str == today %}data-today{% endif %}>
+            <span class="cal-day-num">{{ day }}</span>
+            <div class="cal-events" data-date="{{ day_str }}"></div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+<p class="empty-msg" id="empty-msg" style="display:none">No events match your filters.</p>
+
+{# Embed event data for JS #}
+<script>
+  window.EVENTS = {{ events_json | safe }};
+  window.TODAY = "{{ today }}";
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="static/js/calendar.js"></script>
 {% endblock %}

@@ -1,7 +1,9 @@
+import calendar
+import json
 import shutil
 import sqlite3
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, time
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -11,11 +13,61 @@ import concertvenues.db as db_module
 from concertvenues.models import Event, Venue
 
 
+def _event_to_dict(event: Event, venue: Venue | None) -> dict:
+    """Serialise an Event to a plain dict for JSON embedding in the template."""
+    if event.time:
+        time_str = event.time.strftime("%H:%M")
+        hour = event.time.hour
+        time_of_day = "evening" if hour >= 17 else "daytime"
+    else:
+        time_str = None
+        time_of_day = "unknown"
+
+    return {
+        "id": event.id,
+        "title": event.title,
+        "url": event.url,
+        "date": event.date.isoformat(),
+        "time": time_str,
+        "time_of_day": time_of_day,
+        "price": event.price,
+        "sold_out": event.sold_out,
+        "venue_key": event.venue_key,
+        "venue_name": venue.name if venue else event.venue_key,
+        "venue_url": venue.url if venue else None,
+    }
+
+
+def _build_months(today: date, days_ahead: int) -> list[dict]:
+    """Return a list of month dicts (year, month, name, weeks) covering today + days_ahead."""
+    from_date = today
+    to_date = date.fromordinal(today.toordinal() + days_ahead)
+
+    months = []
+    y, m = from_date.year, from_date.month
+    while (y, m) <= (to_date.year, to_date.month):
+        cal = calendar.monthcalendar(y, m)
+        months.append({
+            "year": y,
+            "month": m,
+            "name": date(y, m, 1).strftime("%B %Y"),
+            "weeks": cal,  # list of [Mon..Sun] lists, 0 = outside month
+        })
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+
+    return months
+
+
 def build_site(conn: sqlite3.Connection, cfg: dict, output_dir: Path) -> None:
     site_cfg = cfg_module.get_site(cfg)
-    days_ahead = site_cfg.get("days_ahead", 90)
+    days_ahead = site_cfg.get("days_ahead", 62)
     base_url = site_cfg.get("base_url", "").rstrip("/")
     site_title = site_cfg.get("title", "Upcoming Concerts")
+
+    today = date.today()
 
     # Load data from DB
     events = db_module.get_upcoming_events(conn, days_ahead=days_ahead)
@@ -39,30 +91,32 @@ def build_site(conn: sqlite3.Connection, cfg: dict, output_dir: Path) -> None:
     )
     env.globals["base_url"] = base_url
     env.globals["site_title"] = site_title
-    env.globals["generated_date"] = date.today().isoformat()
+    env.globals["generated_date"] = today.isoformat()
 
-    # Group events by venue
-    events_by_venue: dict[str, list[Event]] = defaultdict(list)
-    for event in events:
-        events_by_venue[event.venue_key].append(event)
+    # Serialise events to JSON for JS filter engine
+    events_json = json.dumps(
+        [_event_to_dict(e, venues.get(e.venue_key)) for e in events],
+        ensure_ascii=False,
+    )
 
-    # Render index page (all events, sorted by date)
+    # Build month grids
+    months = _build_months(today, days_ahead)
+
+    # Venue list for filter UI
+    venue_list = [
+        {"key": v.key, "name": v.name}
+        for v in sorted(venues.values(), key=lambda v: v.name)
+        if any(e.venue_key == v.key for e in events)
+    ]
+
+    # Render index page
     _render(env, "index.html", output_dir / "index.html", {
-        "events": events,
-        "venues": venues,
+        "months": months,
+        "today": today.isoformat(),
+        "events_json": events_json,
+        "venue_list": venue_list,
         "page_title": site_title,
     })
-
-    # Render per-venue pages
-    venues_dir = output_dir / "venues"
-    venues_dir.mkdir(exist_ok=True)
-    for venue_key, venue_events in events_by_venue.items():
-        venue = venues.get(venue_key)
-        _render(env, "venue.html", venues_dir / f"{venue_key}.html", {
-            "venue": venue,
-            "events": venue_events,
-            "page_title": venue.name if venue else venue_key,
-        })
 
 
 def _render(env: Environment, template_name: str, dest: Path, context: dict) -> None:
