@@ -1,6 +1,8 @@
 # Concert Venues
 
-A static website generator that scrapes upcoming concert events from multiple venue websites and publishes them via GitHub Pages. It runs nightly via GitHub Actions.
+This is a little project I built to keep track of upcoming concers/events at some venues I know and like. By displaying the data one one site, I don't have to check multiple sites whenever I am looking for something to do.
+
+It also served as a test for using the capabilities of Claude Code to build a complete project with multiple components, including web scraping, data handling, and static site generation. Everything in this repository, other than these few lines above, were generated and written by Claude.
 
 ## Project Structure
 
@@ -26,30 +28,6 @@ concertvenues/
 └── .github/workflows/deploy.yml  # GitHub Actions CI/CD
 ```
 
-## Local Setup
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-```
-
-## Configuration
-
-Edit `config.toml` to set your site URL and add venues:
-
-```toml
-[site]
-base_url = "https://yourusername.github.io/concertvenues"
-days_ahead = 90
-
-[venues.fillmore]
-name = "The Fillmore"
-city = "San Francisco, CA"
-url = "https://www.thefillmore.com/events"
-enabled = true
-```
-
 ## Usage
 
 ```bash
@@ -57,6 +35,7 @@ cv scrape              # Scrape all enabled venues
 cv scrape --venue fillmore  # Scrape one venue
 cv generate            # Build the static site into output/
 cv run                 # Scrape + generate in one step
+cv serve              # Serve the generated site locally at http://localhost:8000
 ```
 
 Preview the site by opening `output/index.html` in a browser.
@@ -79,7 +58,7 @@ pytest
 
 1. Push this repository to GitHub
 2. In **Settings → Pages**, set the source branch to `gh-pages`
-3. The `deploy.yml` workflow runs nightly and on manual dispatch:
+3. The `deploy.yml` workflow runs weekly and on manual dispatch:
    - Scrapes all venues
    - Generates the static site
    - Deploys `output/` to the `gh-pages` branch
