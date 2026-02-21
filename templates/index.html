@@ -46,7 +46,7 @@
   </div>
 </aside>
 
-{# ── Calendar ── #}
+{# ── Calendar (desktop) + Agenda (mobile) ── #}
 <div class="calendar-container" id="calendar">
   {% for month in months %}
   <section class="month" data-month="{{ month.year }}-{{ '%02d' % month.month }}">
@@ -78,6 +78,8 @@
   </section>
   {% endfor %}
 </div>
+
+<div class="agenda" id="agenda"></div>
 
 <p class="empty-msg" id="empty-msg" style="display:none">No events match your filters.</p>
 
