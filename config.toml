@@ -76,6 +76,12 @@ city = "London, UK"
 url = "https://www.thegarage.london/live/"
 enabled = true
 
+[venues.theo2]
+name = "The O2"
+city = "London, UK"
+url = "https://www.theo2.co.uk/events"
+enabled = true
+
 # Royal Albert Hall is blocked by Incapsula WAF — use Ticketmaster API (key required)
 # [venues.royalalberthall]
 # name = "Royal Albert Hall"
