@@ -1,6 +1,6 @@
 # Concert Venues
 
-This is a little project I built to keep track of upcoming concerts/events at some venues I know that might have events that interest me. By displaying the data one one site, I don't have to check multiple sites whenever I am looking for something to do.
+This project builds and updates a little website that keeps track of upcoming concerts/events at some venues I know that might have events that interest me. By displaying the data one one site, I don't have to check multiple sites whenever I am looking for something to do.
 
 It also served as a test for using the capabilities of Claude Code to build a complete project with multiple components, including web scraping, data handling, and static site generation. Everything in this repository, other than these few lines above, were generated and written by Claude.
 
