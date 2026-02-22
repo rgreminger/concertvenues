@@ -58,7 +58,7 @@ pytest
 
 1. Push this repository to GitHub
 2. In **Settings → Pages**, set the source branch to `gh-pages`
-3. The `deploy.yml` workflow runs weekly and on manual dispatch:
+3. The `deploy.yml` workflow runs daily at 06:00 UTC and on manual dispatch:
    - Scrapes all venues
    - Generates the static site
    - Deploys `output/` to the `gh-pages` branch
