@@ -1,83 +1,100 @@
 """
-O2 Academy Brixton & O2 Forum Kentish Town scrapers — uses Playwright.
+O2 Academy Brixton & O2 Forum Kentish Town scrapers.
 
-Both venues share the same Academy Music Group platform (Next.js/React).
-Listing URL patterns:
-  - Brixton:      https://www.academymusicgroup.com/o2academybrixton/events/
-  - Kentish Town: https://www.academymusicgroup.com/o2forumkentishtown/events/
+Both venues are on the Academy Music Group platform which exposes a JSON API:
+  https://www.academymusicgroup.com/api/search/events?VenueIds=<ID>&PageSize=200
 
-Event cards: [data-testid="content-events-module__event-card"]
-  - Title:    img[alt] inside the card
-  - Datetime: time[datetime]  → ISO 8601 e.g. "2026-02-27T19:00:00.000Z"
-  - URL:      a[href*="/events/"]  (relative path, prepend base URL)
-  - CTA text: "Find Tickets" = available, "More Info" = info only (no tickets yet),
-              sold-out not observed but would appear as different CTA text.
-  - No price on listing page.
+Venue IDs:
+  - O2 Academy Brixton:      3919
+  - O2 Forum Kentish Town:   5597
+
+API document fields used:
+  - name                   → event title
+  - encodedName            → used to build the event URL slug
+  - eventDate              → date (ISO 8601, midnight UTC)
+  - doorTime               → "HH:MM" string (door open time)
+  - allTicketStatus        → 1 = on sale, 3 = sold out
+  - venue.id               → venue ID (for URL construction)
+
+Event URL pattern:
+  https://www.academymusicgroup.com/<venue-slug>/events/<encodedName>-tickets-<id>/
 """
 
-from datetime import date, datetime, time, timezone
+import re
+from datetime import date, datetime, time
 from typing import Optional
 
-from bs4 import BeautifulSoup
+import requests
 
 from concertvenues.models import Event
 from concertvenues.scrapers.base import BaseScraper
 
-_AMG_BASE = "https://www.academymusicgroup.com"
+_BASE = "https://www.academymusicgroup.com"
+_API = "https://www.academymusicgroup.com/api/search/events"
+_HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+
+_VENUE_IDS = {
+    "o2academybrixton": 3919,
+    "o2forumkentishtown": 5597,
+}
+_VENUE_SLUGS = {
+    "o2academybrixton": "o2academybrixton",
+    "o2forumkentishtown": "o2forumkentishtown",
+}
 
 
-def _scrape_amg_venue(url: str, venue_key: str, headless_url: str) -> list[Event]:
-    from playwright.sync_api import sync_playwright
-
+def _scrape_amg_venue(venue_key: str) -> list[Event]:
+    venue_id = _VENUE_IDS[venue_key]
+    venue_slug = _VENUE_SLUGS[venue_key]
     today = date.today()
+
+    r = requests.get(
+        _API,
+        params={"VenueIds": venue_id, "PageSize": 200},
+        headers=_HEADERS,
+        timeout=20,
+    )
+    r.raise_for_status()
+    docs = r.json().get("documents", [])
+
     events: list[Event] = []
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        try:
-            page.goto(url, timeout=30000, wait_until="networkidle")
-            page.wait_for_timeout(3000)
-            html = page.content()
-        finally:
-            browser.close()
-
-    soup = BeautifulSoup(html, "lxml")
-
     seen: set[tuple[str, date]] = set()
-    for card in soup.select('[data-testid="content-events-module__event-card"]'):
-        # Title from image alt text
-        img = card.select_one("img[alt]")
-        title = img.get("alt", "").strip() if img else ""
-        if not title:
-            continue
 
-        # Date/time from <time datetime="...">
-        time_el = card.select_one("time[datetime]")
-        if not time_el:
-            continue
-        dt_str = time_el.get("datetime", "")
+    for doc in docs:
+        # Date
+        raw_date = doc.get("eventDate", "")
         try:
-            dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-            # Convert to local date (UTC is close enough for London events)
-            event_date = dt.date()
-            event_time: Optional[time] = dt.time().replace(tzinfo=None)
+            event_date = datetime.fromisoformat(raw_date.replace("Z", "+00:00")).date()
         except (ValueError, TypeError):
             continue
-
         if event_date < today:
             continue
 
-        # URL (relative)
-        link_el = card.select_one(f'a[href*="{headless_url}/events/"]')
-        if not link_el:
-            link_el = card.select_one("a[href*=\"/events/\"]")
-        if not link_el:
+        # Title
+        title = doc.get("name", "").strip()
+        if not title:
             continue
-        href = link_el.get("href", "")
-        event_url = href if href.startswith("http") else _AMG_BASE + href
 
-        # Deduplicate by (url, date) — same show can have multiple nights
+        # Time (door time)
+        door = doc.get("doorTime", "") or ""
+        event_time: Optional[time] = None
+        if re.match(r"^\d{1,2}:\d{2}$", door):
+            try:
+                event_time = time.fromisoformat(door)
+            except ValueError:
+                pass
+
+        # URL — construct from venue slug + encodedName + event id
+        encoded = doc.get("encodedName", "")
+        event_id = doc.get("id", "")
+        if encoded and event_id:
+            event_url = f"{_BASE}/{venue_slug}/events/{encoded}-tickets-ae{event_id}/"
+        else:
+            event_url = f"{_BASE}/{venue_slug}/events/"
+
+        # Sold out: allTicketStatus 3 = sold out
+        sold_out = doc.get("allTicketStatus") == 3
+
         key = (event_url, event_date)
         if key in seen:
             continue
@@ -89,6 +106,7 @@ def _scrape_amg_venue(url: str, venue_key: str, headless_url: str) -> list[Event
             date=event_date,
             time=event_time,
             url=event_url,
+            sold_out=sold_out,
         ))
 
     events.sort(key=lambda e: (e.date, e.time or time.min))
@@ -100,7 +118,7 @@ class O2AcademyBrixtonScraper(BaseScraper):
     venue_name = "O2 Academy Brixton"
 
     def fetch_events(self) -> list[Event]:
-        return _scrape_amg_venue(self.url, self.venue_key, "o2academybrixton")
+        return _scrape_amg_venue(self.venue_key)
 
 
 class O2ForumKentishTownScraper(BaseScraper):
@@ -108,4 +126,4 @@ class O2ForumKentishTownScraper(BaseScraper):
     venue_name = "O2 Forum Kentish Town"
 
     def fetch_events(self) -> list[Event]:
-        return _scrape_amg_venue(self.url, self.venue_key, "o2forumkentishtown")
+        return _scrape_amg_venue(self.venue_key)

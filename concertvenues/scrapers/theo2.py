@@ -4,14 +4,16 @@ The O2 scraper.
 Listing page: https://www.theo2.co.uk/events
   - Event cards link to detail pages at /events/detail/<slug>
   - Title: h3 > a inside each card
+  - "Load More Events" button (button.loadMoreEvents) must be clicked
+    repeatedly until it disappears to get the full event list.
 
 Detail pages contain a MusicEvent JSON-LD block with:
   - startDate (ISO 8601, e.g. "2026-03-21T18:30:00+00:00")
   - offers.availability ("Available" | "SoldOut" | etc.)
   - eventStatus (EventCancelled etc.)
 
-We collect all event detail URLs from the listing page, then fetch each
-concurrently to extract date, time, and sold-out status from JSON-LD.
+We use Playwright to load the listing (clicking Load More until exhausted),
+then fetch each detail page concurrently via requests for JSON-LD data.
 """
 
 import json
@@ -88,11 +90,28 @@ class TheO2Scraper(BaseScraper):
     venue_name = "The O2"
 
     def fetch_events(self) -> list[Event]:
+        from playwright.sync_api import sync_playwright
+
         today = date.today()
 
-        soup = _fetch(self.url)
-        if not soup:
-            return []
+        # Use Playwright to load listing and click "Load More" until exhausted
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page()
+            try:
+                page.goto(self.url, wait_until="networkidle", timeout=60_000)
+                page.wait_for_timeout(2000)
+                while True:
+                    btn = page.query_selector("button.loadMoreEvents")
+                    if not btn or not btn.is_visible():
+                        break
+                    btn.click()
+                    page.wait_for_timeout(1500)
+                html = page.content()
+            finally:
+                browser.close()
+
+        soup = BeautifulSoup(html, "lxml")
 
         # Collect all unique event detail URLs
         seen: set[str] = set()

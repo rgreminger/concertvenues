@@ -1,44 +1,38 @@
 """
 Roundhouse scraper.
 
-Listing page: https://www.roundhouse.org.uk/whats-on/
-  - Event cards: div.event-card
-  - Title: .event-card__title
-  - Date: .event-card__date  (format "Sat 21 Feb 26")
-  - Link: a.event-card__link[href]
+Listing pages: https://www.roundhouse.org.uk/whats-on/?type=event
+  Paginated as /whats-on/page/N/?type=event
+  - Event cards: .event-card
+  - Title:       .event-card__title
+  - Date:        .event-card__date  (format "Sat 21 Feb 26" or "Sat 21 Feb 2026")
+  - Link:        a.event-card__link[href]
 
-Detail pages contain an Event JSON-LD block with:
-  - startDate (ISO 8601, e.g. "2026-02-21T19:00")
-  - offers.lowPrice / priceCurrency
-  - offers.availability (schema.org/SoldOut | schema.org/InStock)
-  - eventStatus (EventCancelled etc.)
+Detail pages are fetched concurrently for time/price/sold-out:
+  - .booking-button__time  → "7pm"
+  - [class*=price]         → "£31.15"
+  - .booking-button text may contain "Sold Out"
 
-We fetch all event cards from the listing, then fetch each detail page
-concurrently to extract time, price, and sold-out status from JSON-LD.
+If a detail page returns 404 or has no booking button, the event is still
+included using only the listing date (time/price/sold-out left as defaults).
 """
 
-import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, time
+from datetime import date, time
 from typing import Optional
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from bs4 import BeautifulSoup
+from dateutil import parser as dateparser
 
 from concertvenues.models import Event
 from concertvenues.scrapers.base import BaseScraper
 
-_BASE = "https://www.roundhouse.org.uk"
 _HEADERS = {"User-Agent": "concertvenues-bot/0.1"}
-_MAX_PAGES = 10
-
-# Slugs containing these strings are not concert events
-_NON_EVENT_SLUG_PATTERNS = re.compile(
-    r"backstage-pass|dj-development|poetry|animation|film|workshop|"
-    r"residency|education|talent|programme|drop-in|club-",
-    re.IGNORECASE,
-)
+_MAX_PAGES = 20
+_PRICE_RE = re.compile(r"£\s*(\d+(?:\.\d{1,2})?)")
 
 
 def _fetch(url: str) -> Optional[BeautifulSoup]:
@@ -50,61 +44,72 @@ def _fetch(url: str) -> Optional[BeautifulSoup]:
         return None
 
 
-def _parse_detail(url: str, today: date) -> Optional[dict]:
-    """Fetch an event detail page and extract fields from its JSON-LD block."""
+def _page_url(base: str, page: int) -> str:
+    """Build a paginated URL preserving query params, e.g. /whats-on/page/2/?type=event."""
+    parsed = urlparse(base)
+    path = parsed.path.rstrip("/")
+    if page > 1:
+        path = f"{path}/page/{page}"
+    return urlunparse(parsed._replace(path=path + "/"))
+
+
+def _parse_date(raw: str) -> Optional[date]:
+    """Parse a date string like 'Sat 21 Feb 26' or 'Sat 21 Feb 2026'."""
+    raw = raw.strip()
+    if not raw:
+        return None
+    # Use only the first date if a range is given ("Tue 24–Fri 27 Feb 26")
+    raw = re.split(r"[–—-]", raw)[0].strip()
+    # Expand 2-digit year suffix
+    raw = re.sub(r"\b(\d{2})\s*$", lambda m: str(2000 + int(m.group(1))), raw)
+    try:
+        parsed = dateparser.parse(raw, dayfirst=True)
+        if parsed:
+            return parsed.date()
+    except Exception:
+        pass
+    return None
+
+
+def _parse_time(raw: str) -> Optional[time]:
+    """Parse a time string like '7pm' or '19:00'."""
+    raw = raw.strip().lower()
+    if not raw:
+        return None
+    try:
+        parsed = dateparser.parse(raw)
+        if parsed:
+            return parsed.time()
+    except Exception:
+        pass
+    return None
+
+
+def _parse_detail(url: str) -> dict:
+    """Fetch a detail page for time/price/sold-out. Returns partial dict (may be empty)."""
+    result: dict = {}
     soup = _fetch(url)
     if not soup:
-        return None
+        return result
 
-    for script in soup.find_all("script", type="application/ld+json"):
-        try:
-            data = json.loads(script.string or "")
-        except (json.JSONDecodeError, TypeError):
-            continue
+    btn = soup.select_one(".booking-button")
+    if not btn:
+        return result
 
-        if not isinstance(data, dict):
-            continue
-        if data.get("@type") != "Event":
-            continue
+    time_el = soup.select_one(".booking-button__time")
+    if time_el:
+        result["time"] = _parse_time(time_el.get_text(strip=True))
 
-        start_raw = data.get("startDate", "")
-        try:
-            start_dt = datetime.fromisoformat(start_raw)
-            event_date = start_dt.date()
-            event_time: Optional[time] = start_dt.time() if start_dt.hour or start_dt.minute else None
-        except (ValueError, TypeError):
-            return None
+    price_el = soup.select_one("[class*='price']")
+    if price_el:
+        m = _PRICE_RE.search(price_el.get_text())
+        if m:
+            result["price"] = f"£{float(m.group(1)):.0f}"
 
-        if event_date < today:
-            return None
+    btn_text = btn.get_text(separator=" ", strip=True).lower()
+    result["sold_out"] = "sold out" in btn_text
 
-        offers = data.get("offers", {})
-        low = offers.get("lowPrice")
-        currency = offers.get("priceCurrency", "GBP")
-        price: Optional[str] = None
-        if low:
-            symbol = "£" if currency == "GBP" else currency
-            high = offers.get("highPrice")
-            if high and high != low:
-                price = f"{symbol}{float(low):.0f}–{symbol}{float(high):.0f}"
-            else:
-                price = f"From {symbol}{float(low):.0f}"
-
-        availability = offers.get("availability", "")
-        sold_out = "SoldOut" in availability
-
-        status = data.get("eventStatus", "")
-        if "Cancelled" in status or "Postponed" in status:
-            return None  # skip cancelled/postponed
-
-        return {
-            "date": event_date,
-            "time": event_time,
-            "price": price,
-            "sold_out": sold_out,
-        }
-
-    return None
+    return result
 
 
 class RoundhouseScraper(BaseScraper):
@@ -113,15 +118,12 @@ class RoundhouseScraper(BaseScraper):
 
     def fetch_events(self) -> list[Event]:
         today = date.today()
-        base_listing = self.url.rstrip("/")
 
-        # Collect event URLs across paginated listing (WordPress /page/N/ pattern)
-        event_urls: list[tuple[str, str]] = []  # (url, title)
+        event_items: list[tuple[str, str, date]] = []
         seen: set[str] = set()
 
         for page in range(1, _MAX_PAGES + 1):
-            page_url = base_listing + "/" if page == 1 else f"{base_listing}/page/{page}/"
-            soup = _fetch(page_url)
+            soup = _fetch(_page_url(self.url, page))
             if not soup:
                 break
 
@@ -129,7 +131,7 @@ class RoundhouseScraper(BaseScraper):
             if not cards:
                 break
 
-            new_on_page = 0
+            any_new = False
             for card in cards:
                 link = card.select_one("a.event-card__link")
                 if not link:
@@ -137,42 +139,42 @@ class RoundhouseScraper(BaseScraper):
                 href = link.get("href", "")
                 if not href or href in seen:
                     continue
-                # Skip non-concert events by URL slug
-                slug = href.rstrip("/").split("/")[-1]
-                if _NON_EVENT_SLUG_PATTERNS.search(slug):
-                    continue
                 seen.add(href)
-                title_el = card.select_one(".event-card__title")
-                title = title_el.get_text(strip=True) if title_el else slug.replace("-", " ").title()
-                event_urls.append((href, title))
-                new_on_page += 1
+                any_new = True
 
-            if new_on_page == 0:
+                date_el = card.select_one(".event-card__date")
+                event_date = _parse_date(date_el.get_text(strip=True) if date_el else "")
+                if not event_date or event_date < today:
+                    continue
+
+                title_el = card.select_one(".event-card__title")
+                slug = href.rstrip("/").split("/")[-1]
+                title = title_el.get_text(strip=True) if title_el else slug.replace("-", " ").title()
+                event_items.append((href, title, event_date))
+
+            if not any_new:
                 break
 
-        if not event_urls:
+        if not event_items:
             return []
 
-        # Fetch each detail page concurrently
         events: list[Event] = []
         with ThreadPoolExecutor(max_workers=8) as pool:
             future_map = {
-                pool.submit(_parse_detail, url, today): (url, title)
-                for url, title in event_urls
+                pool.submit(_parse_detail, url): (url, title, event_date)
+                for url, title, event_date in event_items
             }
             for future in as_completed(future_map):
-                url, title = future_map[future]
+                url, title, event_date = future_map[future]
                 detail = future.result()
-                if detail is None:
-                    continue
                 events.append(Event(
                     venue_key=self.venue_key,
                     title=title,
-                    date=detail["date"],
-                    time=detail["time"],
+                    date=event_date,
+                    time=detail.get("time"),
                     url=url,
-                    price=detail["price"],
-                    sold_out=detail["sold_out"],
+                    price=detail.get("price"),
+                    sold_out=detail.get("sold_out", False),
                 ))
 
         events.sort(key=lambda e: (e.date, e.time or time.min))

@@ -37,7 +37,7 @@ enabled = true
 [venues.roundhouse]
 name = "Roundhouse"
 city = "London, UK"
-url = "https://www.roundhouse.org.uk/whats-on/"
+url = "https://www.roundhouse.org.uk/whats-on/?type=event"
 enabled = true
 
 [venues.islingtonassemblyhall]

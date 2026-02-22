@@ -140,7 +140,8 @@ class IslingtonAssemblyHallScraper(BaseScraper):
         seen_urls: set[str] = set()
 
         for page in range(1, _MAX_PAGES + 1):
-            page_url = self.url if page == 1 else f"{self.url}?page={page}"
+            base = self.url.rstrip("/")
+            page_url = self.url if page == 1 else f"{base}/page/{page}/"
             links = _parse_listing_page(page_url)
             if not links:
                 break
