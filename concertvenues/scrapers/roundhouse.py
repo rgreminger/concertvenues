@@ -120,7 +120,7 @@ class RoundhouseScraper(BaseScraper):
         today = date.today()
 
         event_items: list[tuple[str, str, date]] = []
-        seen: set[str] = set()
+        seen: set[tuple[str, date]] = set()
 
         for page in range(1, _MAX_PAGES + 1):
             soup = _fetch(_page_url(self.url, page))
@@ -137,15 +137,19 @@ class RoundhouseScraper(BaseScraper):
                 if not link:
                     continue
                 href = link.get("href", "")
-                if not href or href in seen:
+                if not href:
                     continue
-                seen.add(href)
                 any_new = True
 
                 date_el = card.select_one(".event-card__date")
                 event_date = _parse_date(date_el.get_text(strip=True) if date_el else "")
                 if not event_date or event_date < today:
                     continue
+
+                key = (href, event_date)
+                if key in seen:
+                    continue
+                seen.add(key)
 
                 title_el = card.select_one(".event-card__title")
                 slug = href.rstrip("/").split("/")[-1]
