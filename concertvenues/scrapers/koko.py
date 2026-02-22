@@ -72,7 +72,7 @@ class KokoScraper(BaseScraper):
 
         soup = BeautifulSoup(html, "lxml")
 
-        seen_urls: set[str] = set()
+        seen: set[tuple[str, date]] = set()
         for card in soup.select('[class*="Event_component"]'):
             # Title from image alt text
             img = card.select_one("img[alt]")
@@ -97,9 +97,11 @@ class KokoScraper(BaseScraper):
                 continue
             href = link_el.get("href", "")
             event_url = href if href.startswith("http") else _BASE + href
-            if event_url in seen_urls:
+            # Deduplicate by (url, date) — same show can have multiple nights
+            key = (event_url, event_date)
+            if key in seen:
                 continue
-            seen_urls.add(event_url)
+            seen.add(key)
 
             # Sold-out flag
             sold_out = bool(card.select_one('[class*="Event_soldout"]'))

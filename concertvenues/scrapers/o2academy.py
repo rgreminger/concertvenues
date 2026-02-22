@@ -44,7 +44,7 @@ def _scrape_amg_venue(url: str, venue_key: str, headless_url: str) -> list[Event
 
     soup = BeautifulSoup(html, "lxml")
 
-    seen_urls: set[str] = set()
+    seen: set[tuple[str, date]] = set()
     for card in soup.select('[data-testid="content-events-module__event-card"]'):
         # Title from image alt text
         img = card.select_one("img[alt]")
@@ -76,9 +76,12 @@ def _scrape_amg_venue(url: str, venue_key: str, headless_url: str) -> list[Event
             continue
         href = link_el.get("href", "")
         event_url = href if href.startswith("http") else _AMG_BASE + href
-        if event_url in seen_urls:
+
+        # Deduplicate by (url, date) — same show can have multiple nights
+        key = (event_url, event_date)
+        if key in seen:
             continue
-        seen_urls.add(event_url)
+        seen.add(key)
 
         events.append(Event(
             venue_key=venue_key,

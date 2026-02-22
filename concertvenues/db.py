@@ -35,10 +35,21 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             on_sale_date TEXT,
             price        TEXT,
             sold_out     INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(venue_key, url)
+            UNIQUE(venue_key, url, date)
         );
     """)
     conn.commit()
+    _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Drop and recreate events table if the schema has changed."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='events'"
+    ).fetchone()
+    if row and "UNIQUE(venue_key, url, date)" not in row[0]:
+        conn.executescript("DROP TABLE IF EXISTS events;")
+        _create_schema(conn)
 
 
 # --- Venues ---
@@ -68,17 +79,8 @@ def get_all_venues(conn: sqlite3.Connection) -> list[Venue]:
 def upsert_event(conn: sqlite3.Connection, event: Event) -> None:
     conn.execute(
         """
-        INSERT INTO events (venue_key, title, date, time, url, description, image_url, on_sale_date, price, sold_out)
+        INSERT OR REPLACE INTO events (venue_key, title, date, time, url, description, image_url, on_sale_date, price, sold_out)
         VALUES (:venue_key, :title, :date, :time, :url, :description, :image_url, :on_sale_date, :price, :sold_out)
-        ON CONFLICT(venue_key, url) DO UPDATE SET
-            title        = excluded.title,
-            date         = excluded.date,
-            time         = excluded.time,
-            description  = excluded.description,
-            image_url    = excluded.image_url,
-            on_sale_date = excluded.on_sale_date,
-            price        = excluded.price,
-            sold_out     = excluded.sold_out
         """,
         {
             "venue_key":    event.venue_key,
