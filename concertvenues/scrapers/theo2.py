@@ -101,6 +101,19 @@ class TheO2Scraper(BaseScraper):
             try:
                 page.goto(self.url, wait_until="networkidle", timeout=60_000)
                 page.wait_for_timeout(2000)
+
+                # Dismiss OneTrust cookie consent banner if present
+                for selector in (
+                    "#onetrust-accept-btn-handler",
+                    "button#accept-recommended-btn-handler",
+                    ".onetrust-accept-btn-handler",
+                ):
+                    btn = page.query_selector(selector)
+                    if btn and btn.is_visible():
+                        btn.click()
+                        page.wait_for_timeout(1000)
+                        break
+
                 while True:
                     btn = page.query_selector("button.loadMoreEvents")
                     if not btn or not btn.is_visible():
