@@ -78,8 +78,8 @@ def _serve(args, cfg):
     print("Press Ctrl+C to stop.\n")
     webbrowser.open(url)
 
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", port), _Handler) as httpd:
-        httpd.allow_reuse_address = True
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

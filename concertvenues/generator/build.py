@@ -47,6 +47,15 @@ def _build_months(today: date, days_ahead: int) -> list[dict]:
     y, m = from_date.year, from_date.month
     while (y, m) <= (to_date.year, to_date.month):
         cal = calendar.monthcalendar(y, m)
+
+        # For the first month, drop weeks that end before today so the calendar
+        # doesn't start with a wall of empty past days.
+        if y == from_date.year and m == from_date.month:
+            cal = [
+                week for week in cal
+                if max(d for d in week if d != 0) >= from_date.day
+            ]
+
         months.append({
             "year": y,
             "month": m,

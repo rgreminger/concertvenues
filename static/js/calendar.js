@@ -117,13 +117,17 @@
   }
 
   function applyFilters() {
+    const allVenues = document.getElementById("venueSelectAll").checked;
     const activeVenues = new Set(getCheckedValues("venue"));
     const activeTimes = new Set(getCheckedValues("timeofday"));
     const hideSoldOut = document.getElementById("hideSoldOut").checked;
 
     function chipVisible(chip) {
-      return activeVenues.has(chip.dataset.venue) &&
-        activeTimes.has(chip.dataset.timeofday) &&
+      const timeOk = chip.dataset.timeofday === "unknown"
+        ? activeTimes.size > 0
+        : activeTimes.has(chip.dataset.timeofday);
+      return (allVenues || activeVenues.has(chip.dataset.venue)) &&
+        timeOk &&
         !(hideSoldOut && chip.dataset.soldOut === "1");
     }
 
@@ -154,9 +158,31 @@
     if (emptyMsg) emptyMsg.style.display = totalVisible ? "none" : "";
   }
 
-  document.querySelectorAll(".filters input").forEach(input => {
+  // ── Venue filters ──
+  const venueInputs = [...document.querySelectorAll('input[name="venue"]')];
+  const selectAllInput = document.getElementById("venueSelectAll");
+
+  selectAllInput.addEventListener("change", () => {
+    if (selectAllInput.checked) {
+      venueInputs.forEach(i => { i.checked = false; });
+    }
+    applyFilters();
+  });
+
+  venueInputs.forEach(input => {
+    input.addEventListener("change", () => {
+      if (input.checked) selectAllInput.checked = false;
+      applyFilters();
+    });
+  });
+
+  document.querySelectorAll(".filters input:not([name='venue']):not(#venueSelectAll)").forEach(input => {
     input.addEventListener("change", applyFilters);
   });
 
+  // Explicitly set default state in JS to defeat browser form-state restoration
+  selectAllInput.checked = true;
+  venueInputs.forEach(i => { i.checked = false; });
+  document.getElementById("hideSoldOut").checked = true;
   applyFilters();
 })();

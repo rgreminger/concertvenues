@@ -18,17 +18,13 @@
         <input type="checkbox" name="timeofday" value="daytime" checked>
         <span>Daytime</span>
       </label>
-      <label class="filter-chip">
-        <input type="checkbox" name="timeofday" value="unknown" checked>
-        <span>Time unknown</span>
-      </label>
     </div>
   </div>
 
   <div class="filter-group">
     <span class="filter-label">Availability</span>
     <label class="filter-chip">
-      <input type="checkbox" name="hideSoldOut" id="hideSoldOut">
+      <input type="checkbox" name="hideSoldOut" id="hideSoldOut" checked>
       <span>Hide sold out</span>
     </label>
   </div>
@@ -36,9 +32,13 @@
   <div class="filter-group filter-group--venues">
     <span class="filter-label">Venue</span>
     <div class="filter-options filter-options--wrap" id="venue-filters">
+      <label class="filter-chip filter-chip--select-all">
+        <input type="checkbox" id="venueSelectAll" checked>
+        <span>All venues</span>
+      </label>
       {% for v in venue_list %}
       <label class="filter-chip">
-        <input type="checkbox" name="venue" value="{{ v.key }}" checked>
+        <input type="checkbox" name="venue" value="{{ v.key }}">
         <span>{{ v.name }}</span>
       </label>
       {% endfor %}
