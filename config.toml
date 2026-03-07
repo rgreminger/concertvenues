@@ -82,12 +82,11 @@ city = "London, UK"
 url = "https://www.theo2.co.uk/events"
 enabled = true
 
-# Royal Albert Hall is blocked by Incapsula WAF — use Ticketmaster API (key required)
-# [venues.royalalberthall]
-# name = "Royal Albert Hall"
-# city = "London, UK"
-# url = "https://www.royalalberthall.com/tickets/calendar"
-# enabled = false
+[venues.royalalberthall]
+name = "Royal Albert Hall"
+city = "London, UK"
+url = "https://www.royalalberthall.com/tickets/calendar"
+enabled = true
 
 # Union Chapel — Isotope JS grid stays empty even with Playwright; no events load
 # [venues.unionchapel]

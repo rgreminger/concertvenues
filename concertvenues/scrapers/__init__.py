@@ -16,6 +16,7 @@ from concertvenues.scrapers.jazzcafe import JazzCafeScraper
 from concertvenues.scrapers.koko import KokoScraper
 from concertvenues.scrapers.o2academy import O2AcademyBrixtonScraper, O2ForumKentishTownScraper
 from concertvenues.scrapers.roundhouse import RoundhouseScraper
+from concertvenues.scrapers.royalalberthall import RoyalAlbertHallScraper
 from concertvenues.scrapers.thegarage import TheGarageScraper
 from concertvenues.scrapers.theo2 import TheO2Scraper
 
@@ -31,4 +32,5 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
     "koko": KokoScraper,
     "thegarage": TheGarageScraper,
     "theo2": TheO2Scraper,
+    "royalalberthall": RoyalAlbertHallScraper,
 }
