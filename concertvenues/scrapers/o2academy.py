@@ -14,10 +14,12 @@ API document fields used:
   - eventDate              → date (ISO 8601, midnight UTC)
   - doorTime               → "HH:MM" string (door open time)
   - allTicketStatus        → 1 = on sale, 3 = sold out
-  - venue.id               → venue ID (for URL construction)
+  - lineup[].isPrimary     → identifies the headline artist
+  - lineup[].encodedName   → artist slug used in event URL
+  - lineup[].id            → artist ID used in event URL
 
 Event URL pattern:
-  https://www.academymusicgroup.com/<venue-slug>/events/<encodedName>-tickets-<id>/
+  https://www.academymusicgroup.com/<venue-slug>/events/<lineup.encodedName>-tickets-ae<lineup.id>/
 """
 
 import re
@@ -84,11 +86,13 @@ def _scrape_amg_venue(venue_key: str) -> list[Event]:
             except ValueError:
                 pass
 
-        # URL — construct from venue slug + encodedName + event id
-        encoded = doc.get("encodedName", "")
-        event_id = doc.get("id", "")
-        if encoded and event_id:
-            event_url = f"{_BASE}/{venue_slug}/events/{encoded}-tickets-ae{event_id}/"
+        # URL — use primary lineup artist's encodedName + id (not event's own id)
+        lineup = doc.get("lineup") or []
+        primary = next((a for a in lineup if a.get("isPrimary")), lineup[0] if lineup else None)
+        if primary and primary.get("encodedName") and primary.get("id"):
+            encoded = primary["encodedName"]
+            artist_id = primary["id"]
+            event_url = f"{_BASE}/{venue_slug}/events/{encoded}-tickets-ae{artist_id}/"
         else:
             event_url = f"{_BASE}/{venue_slug}/events/"
 
