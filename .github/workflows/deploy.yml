@@ -40,7 +40,9 @@ jobs:
         run: |
           python -m venv .venv
           .venv/bin/pip install -r requirements.txt
-          .venv/bin/pip install -e .
+
+      - name: Install package
+        run: .venv/bin/pip install -e . --no-deps
 
       - name: Add venv to PATH
         run: echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
