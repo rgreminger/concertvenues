@@ -28,6 +28,20 @@ concertvenues/
 └── .github/workflows/deploy.yml  # GitHub Actions CI/CD
 ```
 
+## Installation
+
+Install the package first — this puts the `cv` command on your PATH. Without it,
+none of the commands below will resolve.
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate   # optional but recommended
+pip install -e .          # add the [dev] extra too if you plan to run the tests
+playwright install chromium   # only needed for venues that require JS rendering
+```
+
+If you would rather not install, every command can be run as a module instead,
+e.g. `python3 -m concertvenues.cli generate`.
+
 ## Usage
 
 ```bash
@@ -50,7 +64,10 @@ Preview the site by opening `output/index.html` in a browser.
 
 ## Running Tests
 
+The test dependencies live in the `dev` extra, so install that first:
+
 ```bash
+pip install -e ".[dev]"
 pytest
 ```
 

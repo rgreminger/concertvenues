@@ -88,6 +88,12 @@ city = "London, UK"
 url = "https://www.royalalberthall.com/tickets/calendar"
 enabled = true
 
+[venues.dingwalls]
+name = "Dingwalls"
+city = "London, UK"
+url = "https://dingwalls.com/whats-on/"
+enabled = true
+
 # Union Chapel — Isotope JS grid stays empty even with Playwright; no events load
 # [venues.unionchapel]
 # name = "Union Chapel"

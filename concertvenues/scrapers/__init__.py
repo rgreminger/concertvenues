@@ -9,6 +9,7 @@ To add a new venue scraper:
 
 from concertvenues.scrapers.alexandrapalace import AlexandraPalaceScraper
 from concertvenues.scrapers.base import BaseScraper
+from concertvenues.scrapers.dingwalls import DingwallsScraper
 from concertvenues.scrapers.earthackney import EarthAckneyScraper
 from concertvenues.scrapers.electricballroom import ElectricBallroomScraper
 from concertvenues.scrapers.islingtonassemblyhall import IslingtonAssemblyHallScraper
@@ -33,4 +34,5 @@ SCRAPERS: dict[str, type[BaseScraper]] = {
     "thegarage": TheGarageScraper,
     "theo2": TheO2Scraper,
     "royalalberthall": RoyalAlbertHallScraper,
+    "dingwalls": DingwallsScraper,
 }
