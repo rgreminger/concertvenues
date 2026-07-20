@@ -7,17 +7,23 @@ from bs4 import BeautifulSoup
 from concertvenues.models import Event
 from concertvenues.scrapers.base import BaseScraper
 
+# Use headers for requests 
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+}
+
 
 class EarthAckneyScraper(BaseScraper):
     venue_key = "earthackney"
     venue_name = "EartH Hackney"
 
     def fetch_events(self) -> list[Event]:
-        response = requests.get(
-            self.url,
-            timeout=15,
-            headers={"User-Agent": "concertvenues-bot/0.1"},
-        )
+        response = requests.get(self.url, timeout=15, headers=_HEADERS)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "lxml")
 

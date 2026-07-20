@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -7,6 +8,16 @@ import concertvenues.config as cfg_module
 import concertvenues.db as db_module
 from concertvenues.scrapers import SCRAPERS
 from concertvenues.generator.build import build_site
+
+
+def _warn(message: str) -> None:
+    """Print a warning, annotated so it surfaces in the GitHub Actions run summary."""
+    # stdout is block-buffered when piped (as under CI); flush so the warning
+    # lands after the scrape log rather than in the middle of it.
+    sys.stdout.flush()
+    if os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning::{message}", flush=True)
+    print(f"WARNING: {message}", file=sys.stderr, flush=True)
 
 
 def _scrape(args, cfg):
@@ -28,6 +39,9 @@ def _scrape(args, cfg):
         print("No enabled scrapers found. Check your config.toml [venues] section.")
         return
 
+    empty: list[str] = []
+    failed: list[str] = []
+
     for key, scraper_cls in targets.items():
         venue_cfg = enabled_venues.get(key, {})
         scraper = scraper_cls(venue_cfg)
@@ -45,12 +59,26 @@ def _scrape(args, cfg):
             for event in events:
                 db_module.upsert_event(conn, event)
             print(f"{len(events)} events saved.")
+            if not events:
+                empty.append(scraper.venue_name)
         except Exception as exc:
             print(f"FAILED ({exc})")
+            failed.append(f"{scraper.venue_name} ({exc})")
 
     removed = db_module.delete_past_events(conn)
     if removed:
         print(f"Cleaned up {removed} past events from the database.")
+
+    # A scraper that returns nothing exits cleanly and looks like a healthy run,
+    # so the site would quietly deploy without that venue. Say so out loud.
+    for name in failed:
+        _warn(f"{name} failed to scrape.")
+    for name in empty:
+        _warn(f"{name} returned 0 events — the site will be built without it.")
+
+    if empty or failed:
+        broken = len(empty) + len(failed)
+        print(f"\n{broken} of {len(targets)} venues produced no events. See warnings above.")
 
 
 def _serve(args, cfg):
