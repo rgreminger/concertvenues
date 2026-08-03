@@ -69,6 +69,10 @@ def _scrape(args, cfg):
     if removed:
         print(f"Cleaned up {removed} past events from the database.")
 
+    dropped = db_module.delete_disabled_venues(conn, set(enabled_venues))
+    if dropped:
+        print(f"Dropped {dropped} events from venues no longer enabled in config.")
+
     # A scraper that returns nothing exits cleanly and looks like a healthy run,
     # so the site would quietly deploy without that venue. Say so out loud.
     for name in failed:

@@ -124,6 +124,27 @@ def delete_past_events(conn: sqlite3.Connection) -> int:
     return cursor.rowcount
 
 
+def delete_disabled_venues(conn: sqlite3.Connection, enabled_keys: set[str]) -> int:
+    """Drop venues no longer enabled in config, along with their events.
+
+    Only matters because the database now survives between CI runs: nothing
+    else ever deletes an event, so a venue removed from config.toml would
+    otherwise linger on the site until its last event aged out.
+    """
+    if not enabled_keys:
+        # An empty config is far more likely to be a loading bug than an
+        # instruction to wipe the database.
+        return 0
+
+    placeholders = ",".join("?" * len(enabled_keys))
+    keys = tuple(enabled_keys)
+    cursor = conn.execute(f"DELETE FROM events WHERE venue_key NOT IN ({placeholders})", keys)
+    removed = cursor.rowcount
+    conn.execute(f"DELETE FROM venues WHERE key NOT IN ({placeholders})", keys)
+    conn.commit()
+    return removed
+
+
 def _row_to_event(row: sqlite3.Row) -> Event:
     return Event(
         id=row["id"],

@@ -58,10 +58,30 @@ jobs:
         if: steps.cache-playwright.outputs.cache-hit != 'true'
         run: playwright install chromium --with-deps
 
+      # Carry the event database over from the previous run. Scrapers upsert
+      # into it and only past events are ever deleted, so a venue that fails or
+      # gets bot-blocked today keeps the events we already know about instead of
+      # dropping off the site entirely.
+      - name: Restore event database
+        uses: actions/cache/restore@v5
+        with:
+          path: data
+          # Cache entries are immutable, so the key has to be unique per run and
+          # the prefix match is what actually restores yesterday's database.
+          key: events-db-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            events-db-
+
       - name: Scrape venues & generate site
         run: cv run
         env:
           TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+
+      - name: Save event database
+        uses: actions/cache/save@v5
+        with:
+          path: data
+          key: events-db-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
